@@ -4,10 +4,13 @@ name: Deploy demo to GitHub Pages
 # shipped as static files. Each push to main rebuilds and republishes the preview at
 # https://whiteroseofficial5-lgtm.github.io/parmaerp/
 #
-# The "Enable GitHub Pages site" step creates the Pages site via the GitHub REST API
-# (using the workflow's GITHUB_TOKEN, which has `pages: write` permission). If the repo
-# admin has restricted Pages creation, fall back to enabling it manually once:
-#   Settings → Pages → Source = GitHub Actions
+# The "Ensure the Pages site exists" step provisions the site if it is missing. Note the
+# GitHub REST API distinction that broke this workflow before: `POST /repos/{o}/{r}/pages`
+# *creates* the site, while `PUT` only *updates* one that already exists (and answers 404
+# when there is none). The workflow's own `GITHUB_TOKEN` cannot create Pages sites at all
+# ("Resource not accessible by integration"), so that step needs an admin PAT in the
+# `PAGES_PAT` secret. With the site already created, this step is a no-op and the normal
+# `GITHUB_TOKEN` is enough.
 on:
   push:
     branches: [main]
@@ -27,40 +30,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ------------------------------------------------------------------
-      # Auto-provision the Pages site if it doesn't exist yet.
-      # GITHUB_TOKEN with `pages: write` is sufficient per the GitHub REST API.
-      # This is idempotent — a 422 (site already exists) is treated as success.
+      # Fail fast, with an actionable message, when the Pages site is missing.
+      # Only an admin token (PAGES_PAT) can create it; GITHUB_TOKEN cannot.
       # ------------------------------------------------------------------
-      - name: Enable GitHub Pages site
-        id: enable_pages
+      - name: Ensure the Pages site exists
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAGES_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pages")
-          echo "existing_pages_status=$STATUS" >> "$GITHUB_OUTPUT"
-          if [ "$STATUS" != "200" ]; then
-            echo "Pages site not found — creating it via API..."
-            curl -sf -X PUT \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/pages" \
-              -d '{"source":{"branch":"github-pages","path":"/"}}' \
-              -o /dev/null -w "\nAPI status: %{http_code}\n" || \
-              echo "::warning::Could not auto-enable Pages (needs repo admin). Enable it in Settings → Pages → Source = GitHub Actions."
-          else
-            echo "Pages site already enabled — skipping creation."
+            "${api}")
+
+          if [ "$status" = "200" ]; then
+            echo "Pages site already enabled."
+            exit 0
           fi
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+          if [ "$status" = "404" ] && [ -n "${GH_TOKEN}" ]; then
+            echo "Pages site missing — creating it via the PAGES_PAT admin token..."
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              "${api}" -d '{"build_type":"workflow"}')
+            if [ "$code" = "201" ] || [ "$code" = "200" ]; then
+              echo "Pages site created."
+              exit 0
+            fi
+            echo "::error::Could not create the Pages site (API status ${code}). Check that the PAGES_PAT secret is an admin token."
+            exit 1
+          fi
+
+          echo "::error::GitHub Pages is not enabled for ${GITHUB_REPOSITORY}."
+          echo "::error::Enable it once at https://github.com/${GITHUB_REPOSITORY}/settings/pages (Source = GitHub Actions),"
+          echo "::error::or add a repo-admin token as the PAGES_PAT secret so this workflow can create the site itself."
+          exit 1
+
+      - uses: actions/configure-pages@v6
 
       - name: Install dependencies
         working-directory: frontend
@@ -79,7 +91,7 @@ jobs:
         working-directory: frontend
         run: touch out/.nojekyll
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/out
 
@@ -92,4 +104,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
