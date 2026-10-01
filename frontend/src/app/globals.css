@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 33% 98%;
+    --foreground: 217 45% 12%;
+    --card: 0 0% 100%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 40%;
+    --border: 214 28% 88%;
+    --input: 214 28% 82%;
+    --ring: 213 90% 33%;
+    --primary: 213 88% 33%;          /* cobalt  #0B4F9C */
+    --primary-foreground: 0 0% 100%;
+    --tint: 214 70% 95%;             /* sky tint #EAF1FB */
+    --sidebar: 219 55% 13%;          /* ink navy */
+    --sidebar-foreground: 214 40% 94%;
+    --sidebar-muted: 216 25% 62%;
+    --success: 161 76% 28%;
+    --warning: 36 78% 38%;
+    --danger: 6 65% 46%;
+  }
+  .dark {
+    --background: 220 40% 8%;
+    --foreground: 214 32% 93%;
+    --card: 220 36% 11%;
+    --muted: 219 30% 16%;
+    --muted-foreground: 215 18% 65%;
+    --border: 219 26% 21%;
+    --input: 219 26% 26%;
+    --ring: 213 90% 65%;
+    --primary: 213 90% 62%;
+    --primary-foreground: 220 45% 8%;
+    --tint: 219 40% 17%;
+    --sidebar: 222 47% 6%;
+    --sidebar-foreground: 214 32% 92%;
+    --sidebar-muted: 215 16% 58%;
+    --success: 158 60% 46%;
+    --warning: 38 85% 58%;
+    --danger: 4 78% 64%;
+  }
+  * { @apply border-border; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-background text-foreground font-sans antialiased; font-feature-settings: 'tnum' 1, 'cv11' 1; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-1 ring-offset-background; }
+}
+
+@layer components {
+  .num { @apply font-mono tabular-nums; }
+  .id-text { @apply font-mono text-[0.8125rem]; }
+  .page-title { @apply text-xl font-semibold tracking-tight; }
+  .field-label { @apply mb-1 block text-[0.8125rem] font-medium text-foreground/80; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+@media print { aside, header, .no-print { display: none !important; } main { padding: 0 !important; } }

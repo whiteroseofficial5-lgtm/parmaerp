@@ -1,0 +1,19 @@
+{
+  "name": "PharmaERP demo",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "npm --prefix backend ci && npm --prefix frontend ci",
+  "forwardPorts": [3000, 4000],
+  "portsAttributes": {
+    "3000": { "label": "PharmaERP web UI", "onAutoForward": "openBrowser" },
+    "4000": { "label": "PharmaERP API" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "bradlc.vscode-tailwindcss"]
+    }
+  },
+  "remoteUser": "node"
+}

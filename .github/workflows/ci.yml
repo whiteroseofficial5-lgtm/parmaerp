@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Backend: typecheck, unit tests, and a real schema push + seed against a Postgres service container.
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pharma
+          POSTGRES_PASSWORD: pharma
+          POSTGRES_DB: pharmaerp
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://pharma:pharma@localhost:5432/pharmaerp?schema=public
+      JWT_SECRET: ci-only-jwt-secret-not-used-in-production
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-used-in-production
+      NODE_ENV: test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run typecheck
+      - run: npx prisma db push --skip-generate
+      - run: npm test
+      - name: Seed demo data (runs the real PO -> GRN -> QC -> batch -> release workflows)
+        run: npm run seed
+
+  # Frontend: typecheck and a production build.
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  # The client demo path: boot the whole Docker stack from a clean checkout and log in for real.
+  demo-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the stack
+        run: docker compose up -d --build
+      - name: Wait for the API and the web UI
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:4000/api/health >/dev/null && curl -fsS -o /dev/null http://localhost:3000; then
+              echo "stack is up after ${i} attempt(s)"; exit 0
+            fi
+            sleep 5
+          done
+          echo "stack did not come up in time"; exit 1
+      - name: Log in through the web UI with the demo account
+        run: |
+          out=$(curl -fsS -X POST http://localhost:3000/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@pharma.local","password":"Pharma@12345"}')
+          echo "${out:0:120} ..."
+          echo "$out" | grep -q '"accessToken"' && echo "login OK - the demo credentials work through the web proxy"
+      - name: Container logs
+        if: always()
+        run: docker compose logs --tail 80

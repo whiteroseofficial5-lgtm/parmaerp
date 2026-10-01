@@ -1,0 +1,15 @@
+# Keep host-only artefacts out of the Docker build context.
+# Without this, `COPY . .` would overwrite the Linux node_modules that `npm ci` just installed
+# with the host's Windows one (wrong esbuild/prisma/next binaries) and would bake .env into the image.
+node_modules
+dist
+storage
+.env
+.env.*
+*.log
+npm-debug.log*
+.git
+.gitignore
+Dockerfile
+.dockerignore
+tests

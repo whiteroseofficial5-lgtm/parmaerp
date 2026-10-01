@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: pharma, POSTGRES_PASSWORD: pharma, POSTGRES_DB: pharmaerp }
+    # Published on host port 5433 (not 5432) so an existing native PostgreSQL install keeps working.
+    # The backend container still reaches the database over the compose network as db:5432 —
+    # only a host-side `npm run dev` needs this mapping (set DATABASE_URL to :5433 for that).
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U pharma"], interval: 5s, retries: 10 }
+
+  backend:
+    build: ./backend
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgresql://pharma:pharma@db:5432/pharmaerp?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string-1}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-too-another-long-random-string-2}
+      CORS_ORIGIN: http://localhost:3000
+      PUBLIC_APP_URL: http://localhost:3000
+      PUBLIC_API_URL: http://localhost:3000   # browser reaches the API through the Next.js /api rewrite
+      UPLOAD_DIR: /app/storage
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-sonnet-5}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    volumes: [storage:/app/storage]
+    ports: ["4000:4000"]
+
+  frontend:
+    # DEMO_MODE=false: this stack serves the real Express/Prisma API, not the in-memory demo data.
+    build: { context: ./frontend, args: { BACKEND_URL: "http://backend:4000", DEMO_MODE: "false" } }
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes: { pgdata: {}, storage: {} }

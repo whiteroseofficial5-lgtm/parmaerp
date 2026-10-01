@@ -1,0 +1,14 @@
+# Keep host-only artefacts out of the Docker build context.
+# `COPY . .` must not clobber the Linux node_modules from `npm ci` with the host's Windows one,
+# and must not ship a host .env or a stale .next build into the image.
+node_modules
+.next
+out
+.env
+.env.*
+*.log
+npm-debug.log*
+.git
+.gitignore
+Dockerfile
+.dockerignore
