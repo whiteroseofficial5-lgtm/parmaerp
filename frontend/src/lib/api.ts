@@ -6,6 +6,8 @@ export class ApiError extends Error {
 
 const ACCESS = 'pe_access';
 const REFRESH = 'pe_refresh';
+// Set when the app is served from a sub-path (e.g. the static GitHub Pages preview).
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 let accessToken: string | null = null;
 let refreshing: Promise<boolean> | null = null;
 
@@ -37,7 +39,7 @@ export async function api<T = any>(path: string, o: Opts = {}): Promise<T> {
   });
   let res = await run();
   if (res.status === 401 && !['/auth/login', '/auth/refresh', '/auth/logout'].includes(path) && (await tryRefresh())) res = await run();
-  if (res.status === 401 && !path.startsWith('/auth/login')) { tokens.clear(); if (typeof window !== 'undefined') window.location.href = '/login'; }
+  if (res.status === 401 && !path.startsWith('/auth/login')) { tokens.clear(); if (typeof window !== 'undefined') window.location.href = `${BASE_PATH}/login`; }
   if (o.raw) return res as unknown as T;
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;

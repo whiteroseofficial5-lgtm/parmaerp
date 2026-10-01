@@ -1,4 +1,5 @@
 'use client';
+import '@/lib/demo-fetch'; // serves /api/* in the fully static build (GitHub Pages preview)
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import * as React from 'react';

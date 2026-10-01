@@ -1,6 +1,8 @@
 node_modules
 .next
+out
 dist
+.api-server-only
 .env
 .env.local
 storage

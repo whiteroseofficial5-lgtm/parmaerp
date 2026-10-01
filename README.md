@@ -28,9 +28,31 @@ Log in with any demo account (all use password `Pharma@12345`):
 `qc@`, `purchase@`, `store@` and `auditor@pharma.local`. The same accounts are listed on the
 login screen; click one to fill the form.
 
-**Publish it as a link.** Import this repository on Vercel (or Netlify), set the project's
+**Already published — just send this link:**
+
+> **https://whiteroseofficial5-lgtm.github.io/parmaerp/**
+
+The whole app, running as static files on GitHub Pages. Nothing to install for whoever opens
+it, and no database, server or account anywhere. `.github/workflows/pages.yml` rebuilds and
+republishes it on every push to `main`.
+
+That works because `npm run build:static` emits a static export, and since a static host cannot
+run the Next.js API route, `frontend/src/lib/demo-fetch.ts` swaps `window.fetch` for an in-page
+version of the *same* handler (`frontend/src/lib/demo-api.ts`) the server route uses — so logins,
+workflows, PDFs and QR codes all behave identically. Dynamic pages are pre-rendered from the
+sample data, so links opened from inside the app work; a record you create *during* the demo
+lives in memory only and its detail page may 404 until the next deploy.
+
+To try the static build locally:
+
+```bash
+cd frontend
+npm run build:static        # writes ./out
+npx serve out               # or any static file server
+```
+
+**Other hosting.** Import this repository on Vercel (or Netlify), set the project's
 **Root Directory** to `frontend`, and deploy as-is — no environment variables are required.
-The result is a public URL you can send to a client.
 
 What demo mode does *and doesn't* do:
 - **Works:** login/RBAC, every list and detail screen, create/approve/release workflows, batch
@@ -157,9 +179,10 @@ docker compose up --build        # Windows: just double-click start-demo.cmd
   pushes the schema, seeds the demo data, runs the backend typecheck + unit tests, production-builds the
   frontend, then boots the whole Docker stack and logs in through the web UI with the demo account. A
   green run means a fresh `git clone` + `docker compose up --build` also works on your client's machine.
-- **Send the client a link (recommended).** Import this repo on Vercel/Netlify with Root Directory
-  `frontend` and deploy — demo mode is on by default, so the link needs no backend, no database and no
-  environment variables. See *Hosted demo* above.
+- **Send the client a link.** `https://whiteroseofficial5-lgtm.github.io/parmaerp/` is live already — no
+  import, no account, no settings. If GitHub Pages is off, turn it on once under *Settings → Pages →
+  Source: GitHub Actions* and re-run the `Deploy demo to GitHub Pages` workflow. Vercel/Netlify with Root
+  Directory `frontend` gives the same result on a custom domain. See *Hosted demo* above.
 - **Client options if they want the full stack**
   1. Local: they install Docker Desktop and run `docker compose up --build` (or `start-demo.cmd`).
      The compose build sets `DEMO_MODE=false`, so this path exercises the real API.
