@@ -8,7 +8,7 @@ const backend = process.env.BACKEND_URL || 'http://localhost:4000';
 // Node server to run the API route, so the browser answers /api/* itself via
 // src/lib/demo-fetch.ts. NEXT_PUBLIC_BASE_PATH is required when hosting under a sub-path,
 // e.g. /parmaerp for a project page on github.io.
-const isStatic = process.env.STATIC_EXPORT === 'true';
+const isStatic = process.env.STATIC_EXPORT === 'true' || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const config = {
