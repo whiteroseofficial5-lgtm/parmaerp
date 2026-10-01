@@ -32,11 +32,11 @@ login screen; click one to fill the form.
 
 > **https://whiteroseofficial5-lgtm.github.io/parmaerp/**
 
-**One-time setup (30 seconds, needs repo admin):** that URL only goes live once Pages is
-switched on — *Settings → Pages → Source = **GitHub Actions*** — and then the
-`Deploy demo to GitHub Pages` workflow is re-run from the *Actions* tab (or any push to `main`).
-This is a repository setting, not something the build can do for itself. Everything else is
-already wired up; nothing needs installing on the client's machine.
+**One-time setup:** the workflow's "Enable GitHub Pages site" step auto-creates the Pages
+site via the GitHub REST API (using a token with `pages: write`). If that fails for a permissions
+reason, enable it manually once — *Settings → Pages → Source = **GitHub Actions*** — then re-run
+or push to `main` again. Everything else is already wired up; nothing needs installing on the
+client's machine.
 
 The whole app, running as static files on GitHub Pages. Nothing to install for whoever opens
 it, and no database, server or account anywhere. `.github/workflows/pages.yml` rebuilds and
@@ -186,9 +186,9 @@ docker compose up --build        # Windows: just double-click start-demo.cmd
   frontend, then boots the whole Docker stack and logs in through the web UI with the demo account. A
   green run means a fresh `git clone` + `docker compose up --build` also works on your client's machine.
 - **Send the client a link.** `https://whiteroseofficial5-lgtm.github.io/parmaerp/` — no import, no
-  account, nothing for them to install. It needs Pages enabled once (*Settings → Pages → Source: GitHub
-  Actions*, then re-run the `Deploy demo to GitHub Pages` workflow). Vercel/Netlify with Root Directory
-  `frontend` gives the same result on a custom domain. See *Hosted demo* above.
+  account, nothing for them to install. The workflow auto-enables Pages via the GitHub REST API; if that
+  ever fails, flip *Settings → Pages → Source: GitHub Actions* once and re-run/push. Vercel/Netlify
+  with Root Directory `frontend` gives the same result on a custom domain. See *Hosted demo* above.
 - **Client options if they want the full stack**
   1. Local: they install Docker Desktop and run `docker compose up --build` (or `start-demo.cmd`).
      The compose build sets `DEMO_MODE=false`, so this path exercises the real API.

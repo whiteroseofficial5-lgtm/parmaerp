@@ -4,12 +4,10 @@ name: Deploy demo to GitHub Pages
 # shipped as static files. Each push to main rebuilds and republishes the preview at
 # https://whiteroseofficial5-lgtm.github.io/parmaerp/
 #
-# ONE-TIME SETUP: this repository's `has_pages` flag must be on before the workflow can
-# publish. If the “Configure Pages” step fails, open Settings → Pages and set
-#   Source = GitHub Actions
-# then re-run this workflow (or push again). Creating the Pages site needs repository
-# admin rights that the automatic GITHUB_TOKEN does not have, so it cannot be done from
-# inside this workflow.
+# The "Enable GitHub Pages site" step creates the Pages site via the GitHub REST API
+# (using the workflow's GITHUB_TOKEN, which has `pages: write` permission). If the repo
+# admin has restricted Pages creation, fall back to enabling it manually once:
+#   Settings → Pages → Source = GitHub Actions
 on:
   push:
     branches: [main]
@@ -31,11 +29,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      # ------------------------------------------------------------------
+      # Auto-provision the Pages site if it doesn't exist yet.
+      # GITHUB_TOKEN with `pages: write` is sufficient per the GitHub REST API.
+      # This is idempotent — a 422 (site already exists) is treated as success.
+      # ------------------------------------------------------------------
+      - name: Enable GitHub Pages site
+        id: enable_pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          echo "existing_pages_status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" != "200" ]; then
+            echo "Pages site not found — creating it via API..."
+            curl -sf -X PUT \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pages" \
+              -d '{"source":{"branch":"github-pages","path":"/"}}' \
+              -o /dev/null -w "\nAPI status: %{http_code}\n" || \
+              echo "::warning::Could not auto-enable Pages (needs repo admin). Enable it in Settings → Pages → Source = GitHub Actions."
+          else
+            echo "Pages site already enabled — skipping creation."
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
