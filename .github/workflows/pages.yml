@@ -34,31 +34,49 @@ jobs:
 
       # ------------------------------------------------------------------
       # Fail fast, with an actionable message, when the Pages site is missing.
-      # Only an admin token (PAGES_PAT) can create it; GITHUB_TOKEN cannot.
+      #
+      # `GET /repos/{owner}/{repo}/pages` needs authentication even on a public repo,
+      # so the check reads the public `has_pages` flag off the repo endpoint instead.
+      # Creating the site does need a token, and only an admin one at that — the
+      # workflow's GITHUB_TOKEN is rejected with "Resource not accessible by
+      # integration" — hence the optional PAGES_PAT secret.
       # ------------------------------------------------------------------
       - name: Ensure the Pages site exists
         env:
           GH_TOKEN: ${{ secrets.PAGES_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pages"
-          status=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "${api}")
+          auth=()
+          if [ -n "${GH_TOKEN}" ]; then
+            auth=(-H "Authorization: Bearer ${GH_TOKEN}")
+          fi
 
-          if [ "$status" = "200" ]; then
+          has_pages=$(curl -sf "${auth[@]}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}" |
+            grep -o '"has_pages": *\(true\|false\)' | grep -o '\(true\|false\)')
+
+          if [ "$has_pages" = "true" ]; then
             echo "Pages site already enabled."
             exit 0
           fi
 
-          if [ "$status" = "404" ] && [ -n "${GH_TOKEN}" ]; then
+          # An empty result means the probe itself failed (rate limit, private repo
+          # without a token). That is not evidence that Pages is off, so let the real
+          # configure-pages/upload steps be the judge instead of guessing.
+          if [ -z "$has_pages" ] && [ -z "${GH_TOKEN}" ]; then
+            echo "::warning::Could not read the has_pages flag; continuing and letting configure-pages decide."
+            exit 0
+          fi
+
+          if [ -n "${GH_TOKEN}" ]; then
             echo "Pages site missing — creating it via the PAGES_PAT admin token..."
             code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "${auth[@]}" \
               -H "Accept: application/vnd.github+json" \
               -H "Content-Type: application/json" \
-              "${api}" -d '{"build_type":"workflow"}')
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages" \
+              -d '{"build_type":"workflow"}')
             if [ "$code" = "201" ] || [ "$code" = "200" ]; then
               echo "Pages site created."
               exit 0
@@ -67,7 +85,7 @@ jobs:
             exit 1
           fi
 
-          echo "::error::GitHub Pages is not enabled for ${GITHUB_REPOSITORY}."
+          echo "::error::GitHub Pages is not enabled for ${GITHUB_REPOSITORY}, so the preview link would 404."
           echo "::error::Enable it once at https://github.com/${GITHUB_REPOSITORY}/settings/pages (Source = GitHub Actions),"
           echo "::error::or add a repo-admin token as the PAGES_PAT secret so this workflow can create the site itself."
           exit 1
