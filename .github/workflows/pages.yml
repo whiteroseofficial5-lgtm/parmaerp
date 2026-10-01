@@ -3,6 +3,13 @@ name: Deploy demo to GitHub Pages
 # The frontend runs entirely without a backend in demo mode, so the whole app can be
 # shipped as static files. Each push to main rebuilds and republishes the preview at
 # https://whiteroseofficial5-lgtm.github.io/parmaerp/
+#
+# ONE-TIME SETUP: this repository's `has_pages` flag must be on before the workflow can
+# publish. If the “Configure Pages” step fails, open Settings → Pages and set
+#   Source = GitHub Actions
+# then re-run this workflow (or push again). Creating the Pages site needs repository
+# admin rights that the automatic GITHUB_TOKEN does not have, so it cannot be done from
+# inside this workflow.
 on:
   push:
     branches: [main]

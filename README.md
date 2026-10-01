@@ -28,9 +28,15 @@ Log in with any demo account (all use password `Pharma@12345`):
 `qc@`, `purchase@`, `store@` and `auditor@pharma.local`. The same accounts are listed on the
 login screen; click one to fill the form.
 
-**Already published — just send this link:**
+**The link to send:**
 
 > **https://whiteroseofficial5-lgtm.github.io/parmaerp/**
+
+**One-time setup (30 seconds, needs repo admin):** that URL only goes live once Pages is
+switched on — *Settings → Pages → Source = **GitHub Actions*** — and then the
+`Deploy demo to GitHub Pages` workflow is re-run from the *Actions* tab (or any push to `main`).
+This is a repository setting, not something the build can do for itself. Everything else is
+already wired up; nothing needs installing on the client's machine.
 
 The whole app, running as static files on GitHub Pages. Nothing to install for whoever opens
 it, and no database, server or account anywhere. `.github/workflows/pages.yml` rebuilds and
@@ -179,10 +185,10 @@ docker compose up --build        # Windows: just double-click start-demo.cmd
   pushes the schema, seeds the demo data, runs the backend typecheck + unit tests, production-builds the
   frontend, then boots the whole Docker stack and logs in through the web UI with the demo account. A
   green run means a fresh `git clone` + `docker compose up --build` also works on your client's machine.
-- **Send the client a link.** `https://whiteroseofficial5-lgtm.github.io/parmaerp/` is live already — no
-  import, no account, no settings. If GitHub Pages is off, turn it on once under *Settings → Pages →
-  Source: GitHub Actions* and re-run the `Deploy demo to GitHub Pages` workflow. Vercel/Netlify with Root
-  Directory `frontend` gives the same result on a custom domain. See *Hosted demo* above.
+- **Send the client a link.** `https://whiteroseofficial5-lgtm.github.io/parmaerp/` — no import, no
+  account, nothing for them to install. It needs Pages enabled once (*Settings → Pages → Source: GitHub
+  Actions*, then re-run the `Deploy demo to GitHub Pages` workflow). Vercel/Netlify with Root Directory
+  `frontend` gives the same result on a custom domain. See *Hosted demo* above.
 - **Client options if they want the full stack**
   1. Local: they install Docker Desktop and run `docker compose up --build` (or `start-demo.cmd`).
      The compose build sets `DEMO_MODE=false`, so this path exercises the real API.
